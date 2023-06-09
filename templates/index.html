@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Python Online Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
+    <style>
+        #editor {
+            height: 500px;
+            width: 700px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="theme">Theme:</label>
+        <select id="theme">
+            <option value="monokai">Monokai</option>
+            <option value="github">GitHub</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="kuroir">Kuroir</option>
+        </select>
+    </div>
+    <div id="editor"></div>
+    <button id="run">Run</button>
+    <button id="save">Save</button>
+    <button id="load">Load</button>
+    <pre id="output"></pre>
+
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/python");
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableSnippets: true,
+            enableLiveAutocompletion: true,
+            autoScrollEditorIntoView: true,
+            useSoftTabs: true,
+            navigateWithinSoftTabs: true,
+            wrap: true,
+            indentedSoftWrap: false,
+            behavioursEnabled: true,
+            enableMultiselect: true,
+            autoIndent: true
+        });
+        var themeSelect = document.getElementById("theme");
+        var runButton = document.getElementById("run");
+        var saveButton = document.getElementById("save");
+        var loadButton = document.getElementById("load");
+        var output = document.getElementById("output");
+
+        themeSelect.addEventListener("change", function() {
+            var theme = themeSelect.value;
+            editor.setTheme("ace/theme/" + theme);
+        });
+        
+        runButton.addEventListener("click", function() {
+            var code = editor.getValue();
+            executeCode(code);
+        });
+
+        saveButton.addEventListener("click", function() {
+            var code = editor.getValue();
+            saveFile(code);
+        });
+
+        loadButton.addEventListener("click", function() {
+            loadFile();
+        });
+
+        function executeCode(code) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/run");
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        output.textContent = response.output;
+                    } else {
+                        output.textContent = "Error: " + xhr.status;
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ code: code }));
+            output.textContent = "Executing code...";
+        }
+
+        function saveFile(code) {
+            var filename = prompt("Enter a filename to save the code as:", "code.py");
+            if (filename) {
+                var element = document.createElement("a");
+                element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(code));
+                element.setAttribute("download", filename);
+                element.style.display = "none";
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
+            }
+        }
+
+        function loadFile() {
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".py";
+            input.onchange = function(event) {
+                var file = event.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var contents = e.target.result;
+                    editor.setValue(contents);
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>
